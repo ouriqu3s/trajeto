@@ -1,12 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cond. Bougainville Residence Privê</title>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script> <!-- Usar CDN mais confiável -->
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -91,6 +89,13 @@
         #linkContainer a:hover {
             text-decoration: underline;
         }
+
+        #searchResult {
+            text-align: center;
+            margin: 15px 0;
+            font-size: 14px;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -106,12 +111,15 @@
 
             <label for="searchValue">Destino:</label>
             <select id="searchValue" name="searchValue" required>
-                <!-- Opções serão inseridas aqui pelo script -->
+                <!-- A lista será atualizada dinamicamente -->
             </select>
 
             <button type="submit">Gerar QR Code</button>
         </form>
-        <div id="proprietarioInfo"></div>
+        
+        <!-- Novo elemento para exibir o resultado da pesquisa -->
+        <div id="searchResult"></div>
+
         <div id="linkContainer"></div> <!-- Novo elemento para o link -->
         <div id="qrcode"></div>
     </div>
@@ -120,7 +128,7 @@
         const portariaCoords = "-7.152322930921254, -34.8093231129095"; // Coordenadas da portaria
 
         const houseData = [
-        {
+             {
         "WKT": "POINT (-34.80944116911525 -7.152811565247221)",
         "Nº da Casa": "2135",
         "Proprietario": "VALMIR VITORIANO PEREIRA – 242-0018",
@@ -2663,117 +2671,144 @@
     },
     {
         "WKT": "POINT (-34.809330394711075 -7.152276382025445)",
-        "Nº da Casa": "6000",
-        "Proprietario": "Portaria",
+        "Nº da Casa": "1",
+        "Proprietario": "Cond. Bougainville",
         "Quadra": "",
         "Lote": ""
     },
     {
         "WKT": "POINT (-34.808994229548354 -7.1552745108712426)",
-        "Nº da Casa": "6001",
-        "Proprietario": "Salão de Festas",
+        "Nº da Casa": "2",
+        "Proprietario": "Cond. Bougainville",
         "Quadra": "",
         "Lote": ""
     },
     {
         "WKT": "POINT (-34.809725230038275 -7.155243311625651)",
-        "Nº da Casa": "6002",
-        "Proprietario": "Área Gourmet",
+        "Nº da Casa": "4",
+        "Proprietario": "Cond. Bougainville",
         "Quadra": "",
         "Lote": ""
     },
     {
-        "WKT": "POINT (-34.808831399674325 -7.1550991669778075)",
-        "Nº da Casa": "6003",
-        "Proprietario": "Administração",
+        "WKT": "POINT (-34.80959860479467 -7.155295315819488)",
+        "Nº da Casa": "3",
+        "Proprietario": "Cond. Bougainville",
+        "Quadra": "",
+        "Lote": ""
+    },
+    {
+        "WKT": "POINT (-34.80883832845226 -7.155252784553616)",
+        "Nº da Casa": "4",
+        "Proprietario": "Cond. Bougainville",
         "Quadra": "",
         "Lote": ""
     }
-            // ... outros dados
+            // Adicionar mais casas
         ];
 
-        function getCoordinatesFromWKT(wkt) {
-            const regex = /POINT \(([-\d.]+) ([-\d.]+)\)/;
-            const match = wkt.match(regex);
-            if (match) {
-                return `${match[2]}, ${match[1]}`; // Retorna como "latitude, longitude"
+        // Função para ordenar os números da casa de forma crescente
+        function sortByHouseNumber() {
+            return houseData.sort((a, b) => parseInt(a["Nº da Casa"]) - parseInt(b["Nº da Casa"]));
+        }
+
+        // Função para ordenar por nome de proprietário (ordem alfabética)
+        function sortByOwner() {
+            return houseData.sort((a, b) => a.Proprietario.localeCompare(b.Proprietario));
+        }
+
+        // Função para ordenar por Quadra e Lote (primeiro por quadra, depois por lote)
+        function sortByQuadraLote() {
+            return houseData.sort((a, b) => {
+                if (parseInt(a.Quadra) === parseInt(b.Quadra)) {
+                    return parseInt(a.Lote) - parseInt(b.Lote);
+                }
+                return parseInt(a.Quadra) - parseInt(b.Quadra);
+            });
+        }
+
+        // Função para atualizar as opções de destino com base no tipo de busca
+        function updateDestinationOptions(searchType) {
+            let sortedData = [];
+
+            const searchValueElement = document.getElementById('searchValue');
+            searchValueElement.innerHTML = ''; // Limpar opções anteriores
+
+            if (searchType === "Nº da Casa") {
+                sortedData = sortByHouseNumber();
+                sortedData.forEach(house => {
+                    searchValueElement.innerHTML += `<option value="${house["Nº da Casa"]}">${house["Nº da Casa"]}</option>`;
+                });
+            } else if (searchType === "Proprietario") {
+                sortedData = sortByOwner();
+                sortedData.forEach(house => {
+                    searchValueElement.innerHTML += `<option value="${house.Proprietario}">${house.Proprietario}</option>`;
+                });
+            } else if (searchType === "Quadra-Lote") {
+                sortedData = sortByQuadraLote();
+                sortedData.forEach(house => {
+                    searchValueElement.innerHTML += `<option value="${house.Quadra}-${house.Lote}">Quadra ${house.Quadra}, Lote ${house.Lote}</option>`;
+                });
             }
-            return null;
         }
 
-        const searchTypeSelect = document.getElementById('searchType');
-        const searchValueSelect = document.getElementById('searchValue');
-        const qrForm = document.getElementById('qrForm');
-        const proprietarioInfoDiv = document.getElementById('proprietarioInfo');
-        const linkContainer = document.getElementById('linkContainer');
+        // Atualiza a lista de opções ao trocar o tipo de busca
+        document.getElementById('searchType').addEventListener('change', function () {
+            updateDestinationOptions(this.value);
+        });
 
-        function populateSearchValues() {
-            const searchType = searchTypeSelect.value;
-            searchValueSelect.innerHTML = ''; // Limpa as opções anteriores
+        // Inicializar com as opções de "Nº da Casa"
+        updateDestinationOptions("Nº da Casa");
 
-            const valuesSet = new Set();
-
-            houseData.forEach(house => {
-                const value = house[searchType];
-                if (value && !valuesSet.has(value)) {
-                    valuesSet.add(value);
-                }
-            });
-
-            // Converte para array e ordena os valores
-            const sortedValues = Array.from(valuesSet).sort((a, b) => {
-                if (searchType === "Nº da Casa" || searchType === "Quadra-Lote") {
-                    // Ordena numericamente
-                    return parseInt(a.match(/\d+/)) - parseInt(b.match(/\d+/));
-                }
-                // Ordena alfabeticamente para proprietários
-                return a.localeCompare(b);
-            });
-
-            sortedValues.forEach(value => {
-                const option = document.createElement('option');
-                option.value = value;
-                option.textContent = value;
-                searchValueSelect.appendChild(option);
-            });
+        // Função para converter o WKT para lat e long
+        function wktToLatLng(wkt) {
+            const coords = wkt.match(/POINT \(([^)]+)\)/)[1].split(' ');
+            return { lat: coords[1], lng: coords[0] };
         }
 
-        searchTypeSelect.addEventListener('change', populateSearchValues);
+        // Função para gerar o QR Code e mostrar o resultado da pesquisa
+        document.getElementById('qrForm').addEventListener('submit', function (e) {
+            e.preventDefault();
 
-        qrForm.addEventListener('submit', function(event) {
-            event.preventDefault();
+            const searchType = document.getElementById('searchType').value;
+            const searchValue = document.getElementById('searchValue').value;
+            let house;
 
-            const searchType = searchTypeSelect.value;
-            const searchValue = searchValueSelect.value;
-
-            const house = houseData.find(house => house[searchType] === searchValue);
+            if (searchType === "Nº da Casa") {
+                house = houseData.find(h => h["Nº da Casa"] === searchValue);
+            } else if (searchType === "Proprietario") {
+                house = houseData.find(h => h.Proprietario === searchValue);
+            } else if (searchType === "Quadra-Lote") {
+                const [quadra, lote] = searchValue.split('-');
+                house = houseData.find(h => h.Quadra === quadra && h.Lote === lote);
+            }
 
             if (house) {
-                const destinationCoords = getCoordinatesFromWKT(house['WKT']);
-                const qrContent = `https://www.google.com/maps/dir/?api=1&origin=${portariaCoords}&destination=${destinationCoords}&travelmode=driving`;
+                // Exibir o resultado da pesquisa
+                document.getElementById('searchResult').innerHTML = `
+                    <strong>Resultado da Pesquisa:</strong><br>
+                    Nº da Casa: ${house["Nº da Casa"]}<br>
+                    Proprietário: ${house.Proprietario}<br>
+                    Quadra: ${house.Quadra}, Lote: ${house.Lote}
+                `;
 
-                document.getElementById('qrcode').innerHTML = '';
+                const coords = wktToLatLng(house.WKT);
+                // Adiciona o travelmode=driving para sempre calcular o trajeto de carro
+                const googleMapsUrl = `https://www.google.com/maps/dir/${portariaCoords}/${coords.lat},${coords.lng}/data=!4m2!4m1!3e0?travelmode=driving`;
 
-                new QRCode(document.getElementById('qrcode'), {
-                    text: qrContent,
+                // Exibir o link no formulário
+                document.getElementById('linkContainer').innerHTML = `<a href="${googleMapsUrl}" target="_blank">Abrir no Google Maps</a>`;
+
+                // Gerar o QR Code com a URL
+                const qrCodeContainer = document.getElementById('qrcode');
+                qrCodeContainer.innerHTML = ""; // Limpar QR code anterior
+                new QRCode(qrCodeContainer, {
+                    text: googleMapsUrl,
                     width: 256,
                     height: 256,
                 });
-
-                proprietarioInfoDiv.textContent = `Proprietário: ${house['Proprietario']}, Nº da Casa: ${house['Nº da Casa']}, Quadra: ${house['Quadra']}, Lote: ${house['Lote']}`;
-
-                linkContainer.innerHTML = '';
-                const link = document.createElement('a');
-                link.href = qrContent;
-                link.target = '_blank';
-                link.textContent = 'Clique aqui para abrir o trajeto no Google Maps';
-                linkContainer.appendChild(link);
-            } else {
-                alert('Destino não encontrado.');
             }
         });
-
-        populateSearchValues();
     </script>
 </body>
 </html>
